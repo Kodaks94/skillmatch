@@ -1,0 +1,92 @@
+<!-- skill_match.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Skill Match</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+  th {
+    background: #f4f4f4;
+  }
+</style>
+
+</head>
+<body>
+<h2>Skill Matcher</h2>
+<input type="text" id="skillsInput" placeholder="e.g. python,django" />
+<button onclick="matchSkills()">Find Matches</button>
+<pre id="results"></pre>
+
+
+<script>
+async function matchSkills() {
+    const skills = document.getElementById("skillsInput").value;
+    const res = await fetch(`/api/match/?skills=${skills}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include'  // enables session cookie auth
+    });
+
+    const data = await res.json();
+    const container = document.getElementById("results");
+
+    if (!Array.isArray(data)) {
+        container.innerHTML = `<p style="color:red;">Error: ${data.detail || JSON.stringify(data)}</p>`;
+        return;
+    }
+
+    if (data.length === 0) {
+        container.innerHTML = "<p>No matching users found.</p>";
+        return;
+    }
+
+    let html = `
+      <table border="1" cellspacing="0" cellpadding="5">
+        <tr>
+          <th>Username</th>
+          <th>Display Name</th>
+          <th>Match Score</th>
+          <th>Readiness</th>
+          <th>Matched Skills</th>
+          <th>All Skills</th>
+        </tr>
+    `;
+
+    data.forEach(user => {
+        const matched = user.skills_matched.map(
+            s => `${s.skill} (${s.level}, +${s.score})`
+        ).join(", ");
+
+        const allSkills = user.skills.map(
+            s => `${s.skill} (${s.level})`
+        ).join(", ");
+
+        html += `
+          <tr>
+            <td>${user.username}</td>
+            <td>${user.display_name || "-"}</td>
+            <td>${user.match_score}</td>
+            <td>${user.readiness_score}</td>
+            <td>${matched}</td>
+            <td>${allSkills}</td>
+          </tr>
+        `;
+    });
+
+    html += "</table>";
+    container.innerHTML = html;
+}
+</script>
+</body>
+</html>

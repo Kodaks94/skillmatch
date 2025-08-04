@@ -1,0 +1,122 @@
+<!-- gap_analysis.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Skill Gap Analysis</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+   <style>
+  #gapResult {
+    border: 1px solid #ccc;
+    padding: 1em;
+    margin-top: 1em;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+  blockquote {
+    background: #eef;
+    padding: 1em;
+    border-left: 5px solid #88c;
+    margin: 1em 0;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      // Does this cookie string begin with the name we want?
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+</script>
+
+</head>
+<body>
+<h2>Gap Analysis</h2>
+<input type="text" id="usernameInput" placeholder="Username or Display Name">
+<input type="text" id="teamNameInput" placeholder="Team Name">
+<button onclick="analyzeGap()">Analyze</button>
+<div id="gapResult"></div>
+
+<script>
+async function analyzeGap() {
+    const usernameOrDisplay = document.getElementById("usernameInput").value.trim().toLowerCase();
+    const teamName = document.getElementById("teamNameInput").value.trim().toLowerCase();
+    const resultEl = document.getElementById("gapResult");
+
+    try {
+        // Fetch all users
+        const userRes = await fetch('/api/users/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'include'
+        });
+        const users = await userRes.json();
+        const user = users.find(u =>
+            u.username.toLowerCase() === usernameOrDisplay ||
+            u.display_name.toLowerCase() === usernameOrDisplay
+        );
+
+        if (!user) {
+            resultEl.innerHTML = `<p style="color:red;">User not found.</p>`;
+            return;
+        }
+
+        // Fetch all teams
+        const teamRes = await fetch('/api/teams/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'include'
+        });
+        const teams = await teamRes.json();
+        const team = teams.find(t => t.name.toLowerCase() === teamName);
+
+        if (!team) {
+            resultEl.innerHTML = `<p style="color:red;">Team not found.</p>`;
+            return;
+        }
+
+        // Send request to gap analysis API
+       const gapRes = await fetch('/api/skill-gap/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+    },
+    credentials: 'include',
+    body: JSON.stringify({ user_id: user.id, team_id: team.id })
+});
+
+
+        const data = await gapRes.json();
+
+       if (!data || !data.user || !data.team) {
+    resultEl.innerHTML = `<p style="color:red;">Unexpected response: ${JSON.stringify(data)}</p>`;
+    return;
+}
+
+const matchedSkills = Array.isArray(data.matched_skills) ? data.matched_skills.join(', ') : 'None';
+const missingSkills = Array.isArray(data.missing_skills) ? data.missing_skills.join(', ') : 'None';
+
+resultEl.innerHTML = `
+    <h3>Gap Analysis for ${data.user} on Team ${data.team}</h3>
+    <p><strong>Matched Skills:</strong> ${matchedSkills}</p>
+    <p><strong>Missing Skills:</strong> ${missingSkills}</p>
+    <p><strong>Summary:</strong></p>
+<div>${marked.parse(data.summary || 'No summary available.')}</div>
+`;
+
+    } catch (e) {
+        resultEl.innerHTML = `<p style="color:red;">Something went wrong: ${e.message}</p>`;
+    }
+}
+</script>

@@ -1,0 +1,33 @@
+<!-- static/css/style.css -->
+body {
+    font-family: Arial, sans-serif;
+    margin: 30px;
+    background-color: #f4f4f4;
+}
+nav a {
+    margin: 0 15px;
+    text-decoration: none;
+    color: #333;
+}
+input, textarea {
+    margin: 10px 0;
+    padding: 8px;
+    width: 300px;
+}
+button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #0056b3;
+}
+pre {
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    max-width: 600px;
+    white-space: pre-wrap;
+}

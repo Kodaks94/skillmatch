@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skill Extractor</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+  </script>
+
+  <style>
+    .skill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 1em;
+    }
+    .badge {
+      background: #e0f0ff;
+      color: #036;
+      border-radius: 12px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    textarea {
+      width: 100%;
+      max-width: 600px;
+    }
+    #skillResult {
+      margin-top: 1em;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Extract Skills from Text</h2>
+  <textarea id="inputText" rows="10" placeholder="Paste job description or resume text here..."></textarea>
+  <br><br>
+  <button onclick="extractSkills()">Extract</button>
+
+  <div id="skillResult"></div>
+
+  <script>
+  async function extractSkills() {
+    const text = document.getElementById("inputText").value.trim();
+    const resultEl = document.getElementById("skillResult");
+    resultEl.innerHTML = "⏳ Extracting skills...";
+
+    try {
+      const res = await fetch('/api/extract-skills/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ text })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Request failed");
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data.skills) && data.skills.length > 0) {
+        resultEl.innerHTML = `
+          <div class="skill-list">
+            ${data.skills.map(s => `<span class="badge">${s}</span>`).join('')}
+          </div>
+        `;
+      } else {
+        resultEl.innerHTML = `<p style="color:red;">No skills found.</p>`;
+      }
+    } catch (e) {
+      resultEl.innerHTML = `<p style="color:red;">Something went wrong: ${e.message}</p>`;
+    }
+  }
+  </script>
+</body>
+</html>
